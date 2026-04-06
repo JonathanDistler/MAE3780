@@ -1,2 +1,4 @@
-# MAE3780
-Work for Cornell's MAE 3780 (Mechatronics); this project outlines iterations, CAD models, and code for a robot built from scratch as part of the final project for the class
+# Mechatronics Final Project (MAE 3780)
+This repository outlines the work of team Linsanity for Cornell MAE 3780 course final project, which is a robot competition in which teams try to "capture" as many blocks as they can in a 1 minute period. The doc outlines our team contracts, our team's codebase, and the relevant .stl files for our CAD. The competition documents (e.g. rules, deadlines, etc.) is located at: [Competition Document](./Resources/CompetitionDocument.html)
+
+
