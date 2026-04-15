@@ -1,144 +1,165 @@
-// No need to include Arduino.h — it's automatic in .ino
+#include <avr/io.h>
+#include <util/delay.h>
+#include <math.h>
 
-// ---------------- CONSTANTS (SI UNITS) ----------------
-const float wheel_diam = 0.0655;      // meters
-const float rpm = 53.6912751678;      // motor RPM
-const float shaft_distance = 0.12;    // meters
+// ---------------- CONSTANTS ----------------
+// (Using math.h PI safely — no redefinition)
+
+float wheel_diam = 2.57874016;        // inches
+float rpm = 53.6912751678;            // motor RPM
+float shaft_distance = 4.72440945;    // inches between wheels
 
 
-// ---------------- FUNCTION PROTOTYPES ----------------
-float time_delay_linear(float distance_m);
-float time_delay_turn(float angle_deg);
+// ---------------- PROTOTYPES ----------------
+float time_delay_func(float distance);
+float time_delay_func_ang(float angle_deg);
 
-void drive_forward(float distance_m);
-void drive_backward(float distance_m);
+void delay_ms_safe(float ms);
+
+void drive_forward(float distance);
+void drive_backward(float distance);
 void drive_right(float degrees);
 void drive_left(float degrees);
 void stop_motors();
 
 
-// ---------------- SETUP ----------------
-void setup() {
+// ---------------- MAIN SEQUENCE ----------------
+int main(void){
 
-  // LEFT MOTOR (PB0, PB1)
-  DDRB |= (1 << 0) | (1 << 1);
+    // LEFT MOTOR (PB0, PB1)
+    DDRB |= (1 << 0) | (1 << 1);
 
-  // RIGHT MOTOR (PD2, PD3)
-  DDRD |= (1 << 2) | (1 << 3);
+    // RIGHT MOTOR (PD2, PD3)
+    DDRD |= (1 << 2) | (1 << 3);
 
-  // BUTTON PB2
-  DDRB &= ~(1 << 2);
-  PORTB |= (1 << 2);   // pull-up
-
-  stop_motors();
-}
-
-
-// ---------------- MAIN LOOP ----------------
-void loop() {
-
-  static uint8_t prev = 1;
-
-  uint8_t curr = (PINB & (1 << 2)) ? 1 : 0;
-
-  // Detect button press (falling edge)
-  if (prev == 1 && curr == 0) {
-
-    drive_forward(0.3048);   // 1 ft
-    drive_right(90);
-
-    drive_forward(0.3048);
-    drive_left(90);
-
-    drive_forward(0.1524);   // 0.5 ft
-    drive_backward(0.4572);  // 1.5 ft
-
-    drive_left(90);
-    drive_forward(0.3048);
+    // BUTTON PB2
+    DDRB &= ~(1 << 2);
+    PORTB |= (1 << 2);   // pull-up enabled
 
     stop_motors();
-  }
 
-  prev = curr;
+    uint8_t prev = 1;
+
+
+    while(1){
+
+        uint8_t curr = (PINB & (1 << 2)) ? 1 : 0;
+
+        // detect button press (HIGH -> LOW)
+        if (prev == 1 && curr == 0) {
+
+            _delay_ms(30); // debounce
+
+            // re-check after debounce
+            if (!(PINB & (1 << 2))) {
+
+                // ---------------- MOTION SEQUENCE ----------------
+
+                drive_forward(12.0);     // 1 foot
+
+                drive_right(90.0);
+
+                drive_forward(12.0);     // 1 foot
+
+                drive_left(90.0);
+
+                drive_forward(6.0);      // 6 inches
+
+                drive_backward(18.0);    // 1.5 feet
+
+                drive_left(90.0);
+
+                drive_forward(12.0);     // return to start
+
+                stop_motors();
+            }
+        }
+
+        prev = curr;
+    }
 }
 
 
-// ---------------- MOVEMENT FUNCTIONS ----------------
-void drive_forward(float distance_m){
+// ---------------- MOTOR CONTROL ----------------
 
-  // LEFT forward
-  PORTB = (PORTB & 0b11111100) | 0b00000010;
+void drive_forward(float distance){
 
-  // RIGHT forward
-  PORTD = (PORTD & 0b11110011) | 0b00001000;
+    PORTB = (PORTB & 0b11111100) | 0b00000010;
+    PORTD = (PORTD & 0b11110011) | 0b00001000;
 
-  float t = time_delay_linear(distance_m);
-  delay((unsigned long)t);
+    delay_ms_safe(time_delay_func(distance));
 }
 
-void drive_backward(float distance_m){
+void drive_backward(float distance){
 
-  // LEFT reverse
-  PORTB = (PORTB & 0b11111100) | 0b00000001;
+    PORTB = (PORTB & 0b11111100) | 0b00000001;
+    PORTD = (PORTD & 0b11110011) | 0b00000100;
 
-  // RIGHT reverse
-  PORTD = (PORTD & 0b11110011) | 0b00000100;
-
-  float t = time_delay_linear(distance_m);
-  delay((unsigned long)t);
+    delay_ms_safe(time_delay_func(distance));
 }
 
 void drive_right(float degrees){
 
-  // LEFT forward
-  PORTB = (PORTB & 0b11111100) | 0b00000010;
+    PORTB = (PORTB & 0b11111100) | 0b00000010;
+    PORTD = (PORTD & 0b11110011) | 0b00000100;
 
-  // RIGHT reverse
-  PORTD = (PORTD & 0b11110011) | 0b00000100;
-
-  float t = time_delay_turn(degrees);
-  delay((unsigned long)t);
+    delay_ms_safe(time_delay_func_ang(degrees));
 }
 
 void drive_left(float degrees){
 
-  // LEFT reverse
-  PORTB = (PORTB & 0b11111100) | 0b00000001;
+    PORTB = (PORTB & 0b11111100) | 0b00000001;
+    PORTD = (PORTD & 0b11110011) | 0b00001000;
 
-  // RIGHT forward
-  PORTD = (PORTD & 0b11110011) | 0b00001000;
-
-  float t = time_delay_turn(degrees);
-  delay((unsigned long)t);
+    delay_ms_safe(time_delay_func_ang(degrees));
 }
 
 void stop_motors(){
 
-  PORTB &= ~((1 << 0) | (1 << 1));
-  PORTD &= ~((1 << 2) | (1 << 3));
+    PORTB &= ~((1 << 0) | (1 << 1));
+    PORTD &= ~((1 << 2) | (1 << 3));
 }
 
 
-// ---------------- TIME CALCULATIONS ----------------
-float time_delay_linear(float distance_m){
+// ---------------- TIMING MODEL ----------------
 
-  float wheel_circ = PI * wheel_diam;     // meters
-  float v = wheel_circ * (rpm / 60.0);    // m/s
-  float t = distance_m / v;               // seconds
+float time_delay_func(float distance){
 
-  return t * 1000.0;                      // ms
+    float wheel_circ = 3.14159265f * wheel_diam;
+
+    float v = wheel_circ * (rpm / 60.0f);   // inches/sec
+
+    float t = distance / v;                // seconds
+
+    return t * 1000.0f;                    // ms
 }
 
-float time_delay_turn(float angle_deg){
+float time_delay_func_ang(float angle_deg){
 
-  float angle_rad = angle_deg * PI / 180.0;
+    float angle_rad = angle_deg * 3.14159265f / 180.0f;
 
-  float wheel_circ = PI * wheel_diam;
-  float v = wheel_circ * (rpm / 60.0);    // m/s
+    float wheel_circ = 3.14159265f * wheel_diam;
 
-  float omega = (2.0 * v) / shaft_distance;  // rad/s
+    float v = wheel_circ * (rpm / 60.0f);
 
-  float t = angle_rad / omega;            // seconds
+    float omega = (2.0f * v) / shaft_distance;
 
-  return t * 1000.0;                      // ms
+    float t = angle_rad / omega;
+
+    return t * 1000.0f;                    // ms
+}
+
+
+// ---------------- SAFE DELAY ----------------
+
+void delay_ms_safe(float ms){
+
+    while (ms >= 1.0f) {
+        _delay_ms(1);
+        ms -= 1.0f;
+    }
+
+    if (ms > 0.0f) {
+        _delay_ms(1);
+    }
 }
