@@ -88,6 +88,8 @@ void drive_right(float degrees){
 
 void setup()
 {
+
+    // Serial.begin(9600);
     DDRB |= (1 << 0) | (1 << 3);
     DDRD |= (1 << 2) | (1 << 3);
 
@@ -118,24 +120,24 @@ void loop()
     uint8_t pins = PINC;
 
     // -------- COLOR CHANGE --------
-    if (p > 0 && (p < startPeriod - 50 || p > startPeriod + 50))
+
+    // Blue to yellow or vice versa
+    if (p > 0 && abs(p - startPeriod) > 400 && abs(p - startPeriod) < 1000)
+    {
+        drive_left(180);           
+        drive_forward(8.0);  // use YOUR function
+        // drive_forward(1.0); 
+    }
+    if (p > 0 && abs(p - startPeriod) > 2000)
     {
         drive_left(180);   // use YOUR function
-        return;
+        drive_forward(4.0);  // use YOUR function
+        // drive_forward(1.0); 
     }
+    // drive_forward(1.0);
+    // Serial.println("Period: ");
+    // Serial.println(p);
+    _delay_ms(500);
+    drive_forward(3.0);
 
-    // -------- LINE DETECTION --------
-    if (!(pins & (1 << PC1)))   // left sees black
-    {
-        drive_left(30);
-    }
-    else if (!(pins & (1 << PC0))) // right sees black
-    {
-        drive_right(30);
-    }
-    else
-    {
-        // -------- CONTINUOUS FORWARD --------
-        drive_forward(1.0);   // small step → acts continuous
-    }
 }
