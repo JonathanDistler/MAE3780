@@ -15,6 +15,9 @@ volatile uint16_t period = 0;
 
 int16_t startPeriod = 0;
 
+bool traverse = false;
+uint16_t traverseCount = 0;
+
 // ---------------- ISR ----------------
 ISR(PCINT1_vect)
 {
@@ -124,7 +127,9 @@ void loop()
     // Blue to yellow or vice versa
     if (p > 0 && abs(p- startPeriod) > 350 && abs(p - startPeriod) < 800)
     {
+        drive_forward(1.0);
         drive_left(90);           
+        traverse = true;
         // drive_forward(8.0);  // use YOUR function
         // Serial.println("Blue");
         drive_forward(1.0); 
@@ -133,12 +138,24 @@ void loop()
     {
         drive_left(180);   // use YOUR function
         drive_forward(1.0);  // use YOUR function
+        if (traverse == true) {
+            traverseCount++;
+        }
         // Serial.println("Black");
         // drive_forward(1.0); 
     }
-    drive_forward(2.0);
-    Serial.println("Period: ");
-    Serial.println(p);
+
+    if (traverseCount == 2) {
+        drive_left(90);
+        drive_forward(12.0);
+    }
+
+    while (traverseCount >= 2) {
+        stop_motors();
+    }
+    drive_forward(1.0);
+    // Serial.println("Period: ");
+    // Serial.println(p);
     _delay_ms(200);
    
 
